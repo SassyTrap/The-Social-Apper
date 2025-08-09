@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Open Wall — Simple Global Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0b0f14;--card:#111826;--muted:#778399;--text:#e7eefc;--accent:#7aa2ff;--accent2:#22d3ee}
+  *{box-sizing:border-box} html,body{height:100%} body{margin:0;background:#0b0f14;color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  .shell{max-width:880px;margin:0 auto;padding:16px}
+  header{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.7);backdrop-filter:blur(8px);border-bottom:1px solid #1f2a3b}
+  header .inner{display:flex;align-items:center;gap:12px;padding:12px 4px}
+  .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#0b0f14;font-weight:800}
+  h1{font-size:18px;margin:0} .grow{flex:1}
+  button{border:0;border-radius:14px;padding:10px 14px;font-weight:600;color:#0b0f14;background:linear-gradient(135deg,var(--accent),var(--accent2));cursor:pointer}
+  .card{background:linear-gradient(180deg,#101827,#0f1624);border:1px solid #1e2a42;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .composer{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px}
+  .avatar{width:48px;height:48px;border-radius:12px;background:#1b2640;display:grid;place-items:center;color:#90a1c7;font-weight:700;overflow:hidden}
+  .avatar img{width:100%;height:100%;object-fit:cover}
+  textarea{width:100%;min-height:68px;background:#0f1523;border:1px solid #1f2a3b;border-radius:14px;color:var(--text);padding:12px 12px 42px;resize:vertical;font-size:14px;line-height:1.35}
+  .composer-actions{display:flex;align-items:center;justify-content:space-between;margin-top:-38px;padding:0 6px 8px}
+  .row{display:flex;align-items:center;gap:10px}
+  .muted{color:var(--muted);font-size:13px}
+  .feed{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+  .post{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px}
+  .post-header{display:flex;align-items:center;gap:8px}
+  .name{font-weight:700} .time{color:var(--muted);font-size:12px}
+  .post .body{white-space:pre-wrap;word-wrap:break-word;margin-top:6px}
+  .post img.media{max-height:420px;width:100%;object-fit:cover;border-radius:14px;margin-top:10px;border:1px solid #1e2a42}
+  .footer{color:#697999;text-align:center;padding:24px 10px}
+</style>
+</head>
+<body>
+  <header>
+    <div class="shell inner">
+      <div class="logo">◎</div>
+      <div><h1>Open Wall — Global</h1><div class="muted" id="status">Connecting…</div></div>
+      <div class="grow"></div>
+      <button id="profileBtn" title="Set name & avatar">Profile</button>
+    </div>
+  </header>
+
+  <main class="shell" style="margin-top:16px">
+    <div class="card composer">
+      <div class="avatar" id="meAvatar">👤</div>
+      <div>
+        <textarea id="text" maxlength="2000" placeholder="What's happening? (shows to everyone)"></textarea>
+        <div class="composer-actions">
+          <div class="row">
+            <label style="cursor:pointer"><input id="mediaFile" type="file" accept="image/*" hidden> <span class="muted">+ Image</span></label>
+            <span class="muted" id="mediaName"></span>
+          </div>
+          <div class="row">
+            <span class="muted" id="charCount">0/2000</span>
+            <button id="postBtn">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="feed" id="feed"></section>
+
+    <div class="footer">Everyone is on the same global room. No accounts. Be nice.</div>
+  </main>
+
+  <dialog id="profileDlg">
+    <form method="dialog" class="card" style="padding:16px">
+      <h3 style="margin:0 0 12px 0">Your profile</h3>
+      <div class="row" style="gap:16px">
+        <div class="avatar" style="width:96px;height:96px;border-radius:18px" id="avatarPreview">👤</div>
+        <div style="flex:1">
+          <input type="text" id="nameInput" placeholder="Display name" maxlength="40" style="width:100%;background:#0f1523;border:1px solid #1f2a3b;border-radius:12px;color:#e7eefc;padding:10px">
+          <div class="row" style="margin-top:10px">
+            <label style="cursor:pointer"><input id="avatarFile" type="file" accept="image/*" hidden> <span class="muted">Upload avatar</span></label>
+            <input type="url" id="avatarUrl" placeholder="…or paste image URL" style="flex:1;background:#0f1523;border:1px solid #1f2a3b;border-radius:12px;color:#e7eefc;padding:10px">
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px;justify-content:space-between">
+        <button value="cancel" class="btn-outline">Close</button>
+        <button id="clearBtn" class="btn-outline">Clear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.min.js"></script>
+  <script>
+  (function(){
+    const $ = s => document.querySelector(s);
+    const toDataURL = (file) => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
+    const fmtTime = ts => new Date(ts).toLocaleString();
+    const uid = () => (Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+
+    // Fixed, known-good public relays (you can add more if needed)
+    const PEERS = [
+      "https://relay.peer.ooo/gun",
+      "https://gun-manhattan.herokuapp.com/gun",
+      "https://gun-us.herokuapp.com/gun"
+    ];
+    const ROOM = "global"; // fixed room so everyone shares the same feed
+
+    const gun = Gun({ peers: PEERS, axe: false });
+    const wall = gun.get('openwall:v1').get(ROOM);
+
+    let peersUp = 0;
+    gun.on('hi', ()=>{ peersUp++; updateStatus(); });
+    gun.on('bye', ()=>{ peersUp=Math.max(0,peersUp-1); updateStatus(); });
+    function updateStatus(){
+      $('#status').textContent = (peersUp>0 ? `Connected · ${peersUp} relay(s)` : 'Connecting…');
+    }
+
+    const LS = {
+      get(){ try{return JSON.parse(localStorage.getItem('openwall:profile')||'{}')}catch{return{}} },
+      set(v){ localStorage.setItem('openwall:profile', JSON.stringify(v)); }
+    };
+    const state = {
+      me: Object.assign({ name: 'Guest'+(Math.random().toString(36).slice(2,5)), avatar: null }, LS.get()),
+      media: null,
+      posts: {}
+    };
+
+    function renderMe(){
+      const el = $('#meAvatar');
+      if(state.me.avatar){ el.innerHTML = `<img alt="me" src="${state.me.avatar}">`; }
+      else{ el.textContent = (state.me.name||'G')[0].toUpperCase(); }
+    }
+    renderMe();
+
+    async function submit(){
+      const text = $('#text').value.trim();
+      if(!text && !state.media){ alert('Write something or add an image.'); return; }
+      const post = {
+        id: uid(),
+        t: Date.now(),
+        name: state.me.name || 'Guest',
+        avatar: state.me.avatar || null,
+        text: text.slice(0,2000),
+        img: state.media || null
+      };
+      wall.get(post.id).put(post);
+      wall.get('index').set({ id: post.id, t: post.t });
+      $('#text').value=''; $('#charCount').textContent='0/2000'; state.media=null; $('#mediaName').textContent='';
+    }
+
+    function renderFeed(){
+      const list = Object.values(state.posts).sort((a,b)=>b.t-a.t).slice(0,500);
+      const frag = document.createDocumentFragment();
+      list.forEach(p=>{
+        const li = document.createElement('article'); li.className='card post';
+        const av = document.createElement('div'); av.className='avatar'; av.innerHTML = p.avatar ? `<img alt="${p.name||''}" src="${p.avatar}">` : (p.name||'G')[0].toUpperCase();
+        const body = document.createElement('div');
+        const head = document.createElement('div'); head.className='post-header';
+        const nm = document.createElement('span'); nm.className='name'; nm.textContent = p.name || 'Guest';
+        const tm = document.createElement('span'); tm.className='time'; tm.textContent = '· ' + fmtTime(p.t);
+        head.append(nm, tm);
+        const txt = document.createElement('div'); txt.className='body'; txt.innerText = p.text || '';
+        body.append(head, txt);
+        if(p.img){ const im=document.createElement('img'); im.className='media'; im.src=p.img; im.alt='attachment'; body.append(im); }
+        li.append(av, body); frag.append(li);
+      });
+      $('#feed').replaceChildren(frag);
+    }
+
+    wall.get('index').map().on((data)=>{
+      if(!data || !data.id) return;
+      wall.get(data.id).once(p=>{ if(!p || !p.t) return; state.posts[p.id]=p; renderFeed(); });
+    });
+
+    // UI events
+    $('#text').addEventListener('input', e=>$('#charCount').textContent = `${e.target.value.length}/2000`);
+    $('#postBtn').addEventListener('click', submit);
+    $('#mediaFile').addEventListener('change', async (e)=>{ const f=e.target.files?.[0]; if(!f)return; if(f.size>2*1024*1024){ alert('Max image 2MB'); return; } state.media=await toDataURL(f); $('#mediaName').textContent=f.name; });
+
+    // Profile dialog
+    const dlg = document.querySelector('#profileDlg');
+    $('#profileBtn').addEventListener('click', ()=>{
+      $('#nameInput').value = state.me.name || '';
+      $('#avatarPreview').innerHTML = state.me.avatar ? `<img alt="me" src="${state.me.avatar}" style="width:100%;height:100%;object-fit:cover">` : '👤';
+      $('#avatarUrl').value='';
+      dlg.showModal();
+    });
+    document.querySelector('#clearBtn').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('openwall:profile'); state.me={ name:'Guest'+(Math.random().toString(36).slice(2,5)), avatar:null }; renderMe(); alert('Profile cleared'); });
+
+    document.querySelector('#nameInput').addEventListener('input', e=>{ state.me.name = e.target.value.slice(0,40); LS.set({ name: state.me.name, avatar: state.me.avatar }); renderMe(); });
+    document.querySelector('#avatarFile').addEventListener('change', async (e)=>{ const f=e.target.files?.[0]; if(!f)return; if(f.size>1024*1024){ alert('Avatar too large (1MB)'); return;} const data=await toDataURL(f); state.me.avatar=data; LS.set({ name: state.me.name, avatar: data }); document.querySelector('#avatarPreview').innerHTML = `<img alt="me" src="${data}" style="width:100%;height:100%;object-fit:cover">`; });
+    document.querySelector('#avatarUrl').addEventListener('change', e=>{ const url=e.target.value.trim(); if(url){ state.me.avatar=url; LS.set({ name: state.me.name, avatar: url }); document.querySelector('#avatarPreview').innerHTML = `<img alt="me" src="${url}" style="width:100%;height:100%;object-fit:cover">`; }});
+  })();
+  </script>
+</body>
+</html>
