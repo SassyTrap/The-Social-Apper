@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Open Wall — Live Social Feed</title>
+  <meta name="description" content="A live social media wall anyone can post to. No sign-in required."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#111826; --muted:#778399; --text:#e7eefc; --accent:#7aa2ff; --accent2:#22d3ee; --danger:#ef4444; --ok:#10b981;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e1421 30%,#0b0f14);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .shell{max-width:900px;margin:0 auto;padding:16px}
+    header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.7);backdrop-filter:blur(8px);border-bottom:1px solid #1f2a3b}
+    header .inner{display:flex;align-items:center;gap:12px;padding:12px 4px}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-badge{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:800;color:#0b0f14}
+    h1{font-size:18px;margin:0}
+    .grow{flex:1}
+    button, .btn{border:0;border-radius:14px;padding:10px 14px;font-weight:600;color:#0b0f14;background:linear-gradient(135deg,var(--accent),var(--accent2));cursor:pointer;transition:filter .15s ease}
+    button:hover{filter:brightness(1.08)}
+    .btn-outline{background:transparent;color:var(--text);border:1px solid #22314a}
+    .btn-ghost{background:transparent;color:var(--muted)}
+    .card{background:linear-gradient(180deg,#101827,#0f1624);border:1px solid #1e2a42;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .composer{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px}
+    .avatar{width:48px;height:48px;border-radius:12px;background:#1b2640;overflow:hidden;display:grid;place-items:center;color:#90a1c7;font-weight:700}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    textarea{width:100%;min-height:68px;background:#0f1523;border:1px solid #1f2a3b;border-radius:14px;color:var(--text);padding:12px 12px 42px;resize:vertical;font-size:14px;line-height:1.35}
+    .composer-actions{display:flex;align-items:center;justify-content:space-between;margin-top:-38px;padding:0 6px 8px}
+    .row{display:flex;align-items:center;gap:10px}
+    .muted{color:var(--muted);font-size:13px}
+    .feed{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+    .post{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:14px}
+    .post-header{display:flex;align-items:center;gap:8px}
+    .name{font-weight:700}
+    .time{color:var(--muted);font-size:12px}
+    .post .body{white-space:pre-wrap;word-wrap:break-word;margin-top:6px}
+    .post img.media{max-height:420px;width:100%;object-fit:cover;border-radius:14px;margin-top:10px;border:1px solid #1e2a42}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .chip{border:1px solid #22314a;color:#a9b8d9;padding:6px 10px;border-radius:999px;font-size:12px}
+    .pill{display:inline-flex;align-items:center;gap:8px}
+    .notice{padding:10px 12px;border-radius:12px;background:#0d1423;border:1px dashed #1e2a42;color:#9cb0cf}
+    .footer{color:#697999;text-align:center;padding:30px 10px}
+    .inline-link{color:#96b7ff;text-decoration:none}
+    .right{margin-left:auto}
+    dialog{border:1px solid #1e2a42;border-radius:16px;background:#0e1422;color:var(--text);max-width:560px;width:92vw}
+    dialog::backdrop{background:rgba(0,0,0,.5)}
+    .grid{display:grid;grid-template-columns:120px 1fr;gap:16px}
+    input[type="text"], input[type="url"]{width:100%;background:#0f1523;border:1px solid #1f2a3b;border-radius:12px;color:var(--text);padding:10px}
+    input[type="file"]{color:#9cb0cf}
+    .hint{font-size:12px;color:#8da3c6;margin-top:8px}
+    .room{color:#c3d4ff;font-weight:700}
+    .danger{background:transparent;border:1px solid #2b2130;color:#f9a8d4}
+    .tiny{font-size:12px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell inner">
+      <div class="logo">
+        <div class="logo-badge">◎</div>
+        <div>
+          <h1>Open Wall</h1>
+          <div class="muted tiny">Live, global feed · Room: <span id="roomLabel" class="room"></span></div>
+        </div>
+      </div>
+      <div class="grow"></div>
+      <button class="btn-outline" id="settingsBtn" title="Profile & options">Profile & Settings</button>
+    </div>
+  </header>
+
+  <main class="shell" style="margin-top:16px">
+    <div class="card composer">
+      <div class="avatar" id="meAvatar">👤</div>
+      <div>
+        <div class="notice" id="statusNotice">Connected: <span id="peerCount">0</span> peers · posts sync in real‑time</div>
+        <textarea id="text" maxlength="2000" placeholder="What's happening? (no sign-in needed)"></textarea>
+        <div class="composer-actions">
+          <div class="row">
+            <label class="chip" style="cursor:pointer">
+              <input id="mediaFile" type="file" accept="image/*" hidden>
+              + Image
+            </label>
+            <span class="muted" id="mediaName"></span>
+          </div>
+          <div class="row">
+            <span class="muted" id="charCount">0/2000</span>
+            <button id="postBtn">Post</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" style="margin-top:12px">
+      <div class="chip">No accounts. Pick a name & go.</div>
+      <div class="chip">Hash rooms: try <code>#tech</code>, <code>#music</code>, <code>#global</code></div>
+      <div class="chip">Public data. Be nice.</div>
+      <div class="chip right" id="storageInfo">Storage: P2P (GUN)</div>
+    </div>
+
+    <section class="feed" id="feed"></section>
+
+    <div class="footer">Made with ♥. Distributed by <a class="inline-link" href="https://github.com/amark/gun" target="_blank" rel="noopener">GUN</a> public peers. Content is user‑generated and not moderated.</div>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog" class="card" style="padding:16px">
+      <h3 style="margin:0 0 12px 0">Profile & Settings</h3>
+      <div class="grid">
+        <div>
+          <div class="avatar" style="width:96px;height:96px;border-radius:18px" id="avatarPreview">👤</div>
+        </div>
+        <div>
+          <label class="muted tiny">Display name</label>
+          <input type="text" id="nameInput" placeholder="Your name" maxlength="40"/>
+          <div class="row" style="margin-top:10px">
+            <label class="btn-outline" style="cursor:pointer">
+              <input id="avatarFile" type="file" accept="image/*" hidden>
+              Upload avatar
+            </label>
+            <input type="url" id="avatarUrl" placeholder="…or paste image URL"/>
+          </div>
+          <div class="hint">Tip: Data persists via the public peer network. Your name & avatar are saved locally on this device.</div>
+        </div>
+      </div>
+      <hr style="border:none;border-top:1px solid #1e2a42;margin:16px 0"/>
+      <div>
+        <label class="muted tiny">Room (by URL hash)</label>
+        <div class="row">
+          <input type="text" id="roomInput" placeholder="#global" style="max-width:220px"/>
+          <button class="btn-outline" id="goRoomBtn" value="default">Go</button>
+        </div>
+        <div class="hint">Use the URL hash to join different feeds. Example: add <code>#music</code> to the end of the URL and reload.</div>
+      </div>
+      <hr style="border:none;border-top:1px solid #1e2a42;margin:16px 0"/>
+      <details>
+        <summary class="muted">Advanced: Peer relays</summary>
+        <div class="hint">You can add/remove public relay peers below if needed.</div>
+        <textarea id="peersInput" style="width:100%;height:100px;background:#0f1523;border:1px solid #1f2a3b;border-radius:12px;color:var(--text);padding:10px"></textarea>
+        <div class="row" style="margin-top:8px">
+          <button class="btn-outline" id="savePeersBtn">Save peers</button>
+          <span class="muted">Changing peers reloads the app.</span>
+        </div>
+      </details>
+      <div class="row" style="margin-top:16px;justify-content:space-between">
+        <button class="btn-ghost" value="cancel">Close</button>
+        <button class="danger btn-outline" id="clearLocalBtn">Clear local settings</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.min.js"></script>
+  <script>
+  ;(function(){
+    const $ = sel => document.querySelector(sel);
+    const escapeHTML = (str) => str.replace(/[&<>\"']/g, (c)=>({"&":"&amp;","<":"&lt;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+    const fmtTime = ts => new Date(ts).toLocaleString();
+    const toDataURL = (file) => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
+    const uid = () => (Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+    const LS = {
+      get(){try{return JSON.parse(localStorage.getItem('openwall:profile')||'{}')}catch{return {}}},
+      set(v){localStorage.setItem('openwall:profile', JSON.stringify(v))}
+    };
+    const LSPeers = {
+      get(){try{return JSON.parse(localStorage.getItem('openwall:peers')||'null')}catch{return null}},
+      set(v){localStorage.setItem('openwall:peers', JSON.stringify(v))}
+    }
+    const DEFAULT_PEERS = [
+      "https://gun-manhattan.herokuapp.com/gun",
+      "https://relay.peer.ooo/gun",
+      "https://gun-us.herokuapp.com/gun"
+    ];
+    const peers = (LSPeers.get() && Array.isArray(LSPeers.get()) && LSPeers.get().length) ? LSPeers.get() : DEFAULT_PEERS;
+    const room = (location.hash && location.hash.slice(1)) || 'global';
+    $('#roomLabel').textContent = '#' + room;
+    const gun = Gun({ peers, axe: false });
+    const wall = gun.get('openwall:v1').get(room);
+    let peerCount = 0;
+    gun.on('hi', peer => { peerCount++; $('#peerCount').textContent = String(peerCount); });
+    gun.on('bye', peer => { peerCount = Math.max(0, peerCount-1); $('#peerCount').textContent = String(peerCount); });
+    const state = {
+      me: Object.assign({ name: 'Guest'+(Math.random().toString(36).slice(2,5)), avatar: null }, LS.get()),
+      draftMedia: null,
+      posts: {}
+    };
+    function saveProfile(){ LS.set({ name: state.me.name, avatar: state.me.avatar }); renderMe(); }
+    function renderMe(){
+      const el = $('#meAvatar');
+      if(state.me.avatar){ el.innerHTML = `<img alt="me" src="${state.me.avatar}">`; }
+      else{ el.textContent = (state.me.name||'G')[0].toUpperCase(); }
+    }
+    renderMe();
+    async function submitPost(){
+      const text = $('#text').value.trim();
+      if(!text && !state.draftMedia){
+        alert('Write something or add an image.');
+        return;
+      }
+      const post = {
+        id: uid(),
+        t: Date.now(),
+        name: state.me.name || 'Guest',
+        avatar: state.me.avatar || null,
+        text: text.slice(0,2000),
+        img: state.draftMedia || null
+      };
+      try{
+        wall.get(post.id).put(post);
+        wall.get('index').set({ id: post.id, t: post.t });
+        $('#text').value='';
+        $('#charCount').textContent = '0/2000';
+        state.draftMedia = null; $('#mediaName').textContent = '';
+      }catch(e){ console.error(e); alert('Failed to post. Try again.'); }
+    }
+    const feedEl = $('#feed');
+    function renderFeed(){
+      const list = Object.values(state.posts).sort((a,b)=>b.t-a.t).slice(0,500);
+      const frag = document.createDocumentFragment();
+      list.forEach(p=>{
+        const li = document.createElement('article'); li.className='card post';
+        const avatar = document.createElement('div'); avatar.className='avatar';
+        avatar.innerHTML = p.avatar ? `<img alt="${escapeHTML(p.name||'')}" src="${p.avatar}">` : (p.name||'G')[0].toUpperCase();
+        const body = document.createElement('div');
+        const h = document.createElement('div'); h.className='post-header';
+        const name = document.createElement('span'); name.className='name'; name.textContent = p.name || 'Guest';
+        const time = document.createElement('span'); time.className='time'; time.textContent = '· ' + fmtTime(p.t);
+        h.append(name,time);
+        const text = document.createElement('div'); text.className='body'; text.innerText = p.text || '';
+        body.append(h,text);
+        if(p.img){ const im = document.createElement('img'); im.className='media'; im.src=p.img; im.alt='attachment'; body.append(im); }
+        li.append(avatar, body);
+        frag.append(li);
+      });
+      feedEl.replaceChildren(frag);
+    }
+    wall.get('index').map().on((data, key)=>{
+      if(!data || !data.id) return;
+      wall.get(data.id).once(p=>{
+        if(!p || !p.t) return;
+        state.posts[p.id] = p; renderFeed();
+      });
+    });
+    $('#text').addEventListener('input', e=>{
+      $('#charCount').textContent = `${e.target.value.length}/2000`;
+    });
+    $('#postBtn').addEventListener('click', submitPost);
+    $('#mediaFile').addEventListener('change', async (e)=>{
+      const file = e.target.files?.[0];
+      if(!file) return; if(file.size>2*1024*1024){ alert('Max image size is 2MB.'); return; }
+      const data = await toDataURL(file); state.draftMedia = data; $('#mediaName').textContent = file.name;
+    });
+    const dlg = $('#settings');
+    $('#settingsBtn').addEventListener('click', ()=>{
+      $('#nameInput').value = state.me.name || '';
+      $('#avatarPreview').innerHTML = state.me.avatar ? `<img alt="me" src="${state.me.avatar}" style="width:100%;height:100%;object-fit:cover">` : '👤';
+      $('#avatarUrl').value = '';
+      $('#roomInput').value = '#'+room;
+      $('#peersInput').value = JSON.stringify(peers, null, 2);
+      dlg.showModal();
+    });
+    $('#nameInput').addEventListener('input', e=>{ state.me.name = e.target.value.slice(0,40); saveProfile(); });
+    $('#avatarFile').addEventListener('change', async (e)=>{
+      const f = e.target.files?.[0]; if(!f) return; if(f.size>1024*1024){ alert('Avatar too large (max 1MB).'); return; }
+      const data = await toDataURL(f); state.me.avatar = data; $('#avatarPreview').innerHTML = `<img alt="me" src="${data}" style="width:100%;height:100%;object-fit:cover">`; saveProfile();
+    });
+    $('#avatarUrl').addEventListener('change', e=>{ const url=e.target.value.trim(); if(url){ state.me.avatar=url; $('#avatarPreview').innerHTML = `<img alt="me" src="${url}" style="width:100%;height:100%;object-fit:cover">`; saveProfile(); }});
+    $('#goRoomBtn').addEventListener('click', (e)=>{ e.preventDefault(); const val=$('#roomInput').value.trim(); if(!val) return; const clean=val.startsWith('#')?val:'#'+val; location.hash = clean; location.reload(); });
+    $('#savePeersBtn').addEventListener('click', (e)=>{ e.preventDefault(); try{ const p = JSON.parse($('#peersInput').value||'[]'); if(Array.isArray(p) && p.length){ LSPeers.set(p); alert('Peers saved. Reloading…'); location.reload(); } else { alert('Invalid peers list. Provide a JSON array of URLs.'); } }catch(err){ alert('Invalid JSON for peers.'); }});
+    $('#clearLocalBtn').addEventListener('click', (e)=>{ e.preventDefault(); localStorage.removeItem('openwall:profile'); state.me = { name: 'Guest'+(Math.random().toString(36).slice(2,5)), avatar: null }; renderMe(); alert('Local settings cleared.'); });
+    $('#storageInfo').textContent = 'Storage: P2P (GUN) · Peers: '+peers.length;
+    setTimeout(()=>{
+      const hasPeers = peerCount>0; $('#statusNotice').textContent = hasPeers ? `Connected: ${peerCount} peers · posts sync in real‑time` : 'Connecting to peers… If it stalls, open Settings → Advanced and try different peers.';
+    }, 1200);
+  })();
+  </script>
+</body>
+</html>
