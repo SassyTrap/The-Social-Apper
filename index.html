@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AmIOn? — Live Feed & DMs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      /* Green & Yellow theme */
+      --bg:#0b1109;           /* deep green-black */
+      --panel:#0f180c;        /* panel base */
+      --card:#121f10;         /* card */
+      --line:#20321a;         /* borders */
+      --text:#f2f7e9;         /* off-white */
+      --muted:#a6b493;        /* muted text */
+      --accent:#9BE215;       /* bright lime */
+      --accent2:#FFD54A;      /* warm yellow */
+      --accent3:#61b20f;      /* leaf green */
+      --danger:#ff6b6b;
+      --ok:#12d48e;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#0d150a 30%,var(--bg));color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    a{color:inherit}
+    .shell{max-width:1000px;margin:0 auto;padding:16px}
+
+    header{position:sticky;top:0;z-index:50;background:rgba(10,16,8,.6);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+    .head{display:flex;align-items:center;gap:12px;padding:12px 4px}
+    .logo{display:flex;align-items:center;gap:10px}
+    .badge{width:36px;height:36px;border-radius:12px;background:radial-gradient(100% 100% at 30% 30%,var(--accent) 0%, var(--accent2) 80%);display:grid;place-items:center;color:#0a1008;font-weight:900;box-shadow:0 0 0 3px rgba(155,226,21,.18)}
+    h1{font-size:18px;margin:0;letter-spacing:.3px}
+    .sub{font-size:12px;color:var(--muted)}
+    .grow{flex:1}
+    .top-actions{display:flex;gap:10px;align-items:center}
+
+    .tabs{display:flex;gap:8px;background:linear-gradient(180deg,#0f170b,var(--panel));border:1px solid var(--line);padding:6px;border-radius:16px}
+    .tab{border:1px solid var(--line);background:transparent;color:var(--text);padding:8px 12px;border-radius:12px;cursor:pointer;font-weight:600}
+    .tab.active{background:linear-gradient(135deg,rgba(155,226,21,.18),rgba(255,213,74,.16));border-color:#2a3d1f;text-shadow:0 0 12px rgba(155,226,21,.35)}
+
+    .grid{display:grid;grid-template-columns:1fr 300px;gap:14px}
+    .col{min-width:0}
+
+    .card{background:linear-gradient(180deg,rgba(146,210,39,.05),rgba(255,213,74,.03));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+
+    /* Composer */
+    .composer{display:grid;grid-template-columns:54px 1fr;gap:12px;padding:14px}
+    .avatar{width:54px;height:54px;border-radius:14px;background:#13220f;overflow:hidden;display:grid;place-items:center;color:#cfe7a4;font-weight:800}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    textarea{width:100%;min-height:80px;background:#0f1a0d;border:1px solid var(--line);border-radius:14px;color:var(--text);padding:12px 12px 46px;resize:vertical;font-size:14px;line-height:1.35}
+    .composer-actions{display:flex;align-items:center;justify-content:space-between;margin-top:-38px;padding:0 6px 8px}
+    .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .muted{color:var(--muted);font-size:13px}
+    .chip{border:1px dashed var(--line);color:#d6e7b6;padding:6px 10px;border-radius:999px;font-size:12px;background:rgba(155,226,21,.08)}
+    .btn{border:0;border-radius:14px;padding:10px 14px;font-weight:700;color:#0a1008;background:linear-gradient(135deg,var(--accent),var(--accent2));cursor:pointer;transition:filter .15s}
+    .btn:hover{filter:brightness(1.06)}
+    .btn-outline{background:transparent;color:var(--text);border:1px solid var(--line)}
+
+    /* Feed */
+    .feed{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+    .post{display:grid;grid-template-columns:54px 1fr;gap:12px;padding:14px}
+    .post-header{display:flex;align-items:center;gap:8px}
+    .name{font-weight:800;cursor:pointer}
+    .time{color:var(--muted);font-size:12px}
+    .post .body{white-space:pre-wrap;word-wrap:break-word;margin-top:6px}
+    .post img.media{max-height:420px;width:100%;object-fit:cover;border-radius:14px;margin-top:10px;border:1px solid var(--line)}
+    .actions{display:flex;gap:10px;margin-top:10px}
+    .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:rgba(255,213,74,.08);cursor:pointer}
+    .count{font-weight:700;color:#eaf7c5}
+
+    /* Right rail */
+    .side{padding:14px;display:flex;flex-direction:column;gap:12px}
+    .notice{padding:12px;border-radius:14px;background:rgba(155,226,21,.06);border:1px dashed var(--line);color:#d2ebb0}
+
+    /* Dialog (Profile & Message) */
+    dialog{border:1px solid var(--line);border-radius:18px;background:#0f170b;color:var(--text);max-width:560px;width:92vw}
+    dialog::backdrop{background:rgba(0,0,0,.5)}
+    input[type="text"], input[type="url"]{width:100%;background:#0f1a0d;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px}
+
+    /* DM layout */
+    .dm-layout{display:grid;grid-template-columns:280px 1fr;gap:12px}
+    .threadlist{padding:10px}
+    .thread{display:flex;align-items:center;gap:8px;padding:10px;border-radius:12px;border:1px solid var(--line);cursor:pointer}
+    .thread.active{background:rgba(155,226,21,.08)}
+    .dm-window{display:flex;flex-direction:column;height:520px}
+    .dm-messages{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:12px}
+    .bubble{max-width:70%;padding:10px 12px;border-radius:14px;border:1px solid var(--line)}
+    .mine{align-self:flex-end;background:rgba(155,226,21,.12)}
+    .theirs{align-self:flex-start;background:#101b0e}
+    .dm-composer{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+    .dm-composer input{flex:1;background:#0f1a0d;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell head">
+      <div class="logo">
+        <div class="badge">✓</div>
+        <div>
+          <h1>AmIOn?</h1>
+          <div class="sub">Live global feed · no sign‑in</div>
+        </div>
+      </div>
+      <div class="grow"></div>
+      <div class="tabs">
+        <button class="tab active" data-tab="feed">Feed</button>
+        <button class="tab" data-tab="dms">DMs</button>
+        <button class="tab" data-tab="profile">Profile</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell" style="margin-top:16px">
+    <div class="grid">
+      <div class="col">
+        <div class="card composer">
+          <div class="avatar" id="meAvatar">👤</div>
+          <div>
+            <textarea id="text" maxlength="2000" placeholder="Share something with everyone…"></textarea>
+            <div class="composer-actions">
+              <div class="row">
+                <label class="chip" style="cursor:pointer"><input id="mediaFile" type="file" accept="image/*" hidden> + Image</label>
+                <span class="muted" id="mediaName"></span>
+              </div>
+              <div class="row">
+                <span class="muted" id="charCount">0/2000</span>
+                <button class="btn" id="postBtn">Post</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="feed" id="feed"></section>
+      </div>
+
+      <aside class="card side">
+        <div class="notice" id="status">Connecting…</div>
+        <div class="notice">Tip: Click a profile name to message privately. DMs appear under the DMs tab. (Not end‑to‑end encrypted—don’t share sensitive info.)</div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Profile dialog -->
+  <dialog id="profileDlg">
+    <form method="dialog" class="card" style="padding:16px">
+      <h3 style="margin:0 0 12px 0">Profile</h3>
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:16px">
+        <div><div class="avatar" style="width:96px;height:96px;border-radius:18px" id="avatarPreview">👤</div></div>
+        <div>
+          <label class="muted" style="font-size:12px">Display name</label>
+          <input type="text" id="nameInput" placeholder="Your name" maxlength="40"/>
+          <div class="row" style="margin-top:10px">
+            <label class="btn-outline" style="cursor:pointer"><input id="avatarFile" type="file" accept="image/*" hidden> Upload avatar</label>
+            <input type="url" id="avatarUrl" placeholder="…or paste image URL"/>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:16px;justify-content:space-between">
+        <button class="btn-outline" value="cancel">Cancel</button>
+        <button class="btn" id="saveProfileBtn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- DM dialog (start a conversation) -->
+  <dialog id="msgDlg">
+    <form method="dialog" class="card" style="padding:16px">
+      <h3 style="margin:0 0 8px 0">Message <span id="msgTargetName"></span></h3>
+      <div class="muted" style="margin-bottom:8px">Say hi! This will open a DM thread.</div>
+      <textarea id="msgText" style="width:100%;height:100px;background:#0f1a0d;border:1px solid var(--line);border-radius:12px;color:var(--text);padding:10px"></textarea>
+      <div class="row" style="margin-top:12px;justify-content:space-between">
+        <button class="btn-outline" value="cancel">Cancel</button>
+        <button class="btn" id="sendFirstMsgBtn">Send</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/gun/gun.min.js"></script>
+  <script>
+  ;(function(){
+    const $ = s => document.querySelector(s);
+    const elFeed = $('#feed');
+    const toDataURL = (file) => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)});
+    const fmtTime = ts => new Date(ts).toLocaleString();
+    const uid = () => (Date.now().toString(36)+Math.random().toString(36).slice(2,8));
+
+    // Fixed peers + room so everyone shares one feed
+    const PEERS = [
+      'https://relay.peer.ooo/gun',
+      'https://gun-manhattan.herokuapp.com/gun',
+      'https://gun-us.herokuapp.com/gun'
+    ];
+    const ROOM = 'global';
+
+    // App state
+    const gun = Gun({ peers: PEERS, axe:false });
+    const root = gun.get('amion:v1');
+    const wall = root.get('rooms').get(ROOM);
+
+    // My identity (device-based)
+    const IDKEY = 'amion:me';
+    function loadMe(){ try{return JSON.parse(localStorage.getItem(IDKEY)||'null') || {} }catch{return{}} }
+    function saveMe(){ localStorage.setItem(IDKEY, JSON.stringify(state.me)); }
+
+    const state = {
+      me: Object.assign({ id: (loadMe().id || ('u_'+uid())), name: (loadMe().name || 'Guest'+Math.random().toString(36).slice(2,5)).slice(0,40), avatar: loadMe().avatar || null }, loadMe()),
+      media:null,
+      posts:{},
+      inboxThreads:{}, // threadId -> {threadId, peerId, name, avatar, last}
+      activeThread:null,
+    };
+
+    // Render my avatar
+    function renderMe(){ const el=$('#meAvatar'); if(state.me.avatar){ el.innerHTML = `<img alt="me" src="${state.me.avatar}">`; } else { el.textContent = (state.me.name||'G')[0].toUpperCase(); } }
+    renderMe();
+
+    // ===== FEED =====
+    function renderFeed(){
+      const list = Object.values(state.posts).sort((a,b)=>b.t-a.t).slice(0,500);
+      const frag = document.createDocumentFragment();
+      list.forEach(p=>{
+        const li = document.createElement('article'); li.className='card post';
+        const av = document.createElement('div'); av.className='avatar'; av.innerHTML = p.avatar ? `<img alt="${p.name||''}" src="${p.avatar}">` : (p.name||'G')[0].toUpperCase();
+        const body = document.createElement('div');
+        const head = document.createElement('div'); head.className='post-header';
+        const nm = document.createElement('span'); nm.className='name'; nm.textContent = p.name || 'Guest';
+        nm.title = 'Click to view profile / DM';
+        nm.addEventListener('click', ()=> openMessageStart(p.authorId, p.name||'Guest', p.avatar||null));
+        const tm = document.createElement('span'); tm.className='time'; tm.textContent = '· '+fmtTime(p.t);
+        head.append(nm, tm);
+        const txt = document.createElement('div'); txt.className='body'; txt.innerText = p.text || '';
+        body.append(head, txt);
+        if(p.img){ const im=document.createElement('img'); im.className='media'; im.src=p.img; im.alt='image'; body.append(im); }
+
+        // Reactions
+        const actions = document.createElement('div'); actions.className='actions';
+        const up = document.createElement('div'); up.className='pill'; up.innerHTML = `👍 <span class="count" id="up_${p.id}">0</span>`; up.addEventListener('click', ()=>react(p.id,'up'));
+        const down = document.createElement('div'); down.className='pill'; down.innerHTML = `👎 <span class="count" id="down_${p.id}">0</span>`; down.addEventListener('click', ()=>react(p.id,'down'));
+        actions.append(up,down);
+        body.append(actions);
+
+        li.append(av, body); frag.append(li);
+      });
+      elFeed.replaceChildren(frag);
+    }
+
+    // Live posts
+    wall.get('index').map().on((data)=>{
+      if(!data || !data.id) return;
+      wall.get('posts').get(data.id).once(p=>{ if(!p || !p.t) return; state.posts[p.id]=p; renderFeed(); updateReactions(p.id); });
+    });
+
+    // Post submit
+    async function submitPost(){
+      const text = $('#text').value.trim(); if(!text && !state.media){ alert('Write something or add an image.'); return; }
+      const post = { id: uid(), t: Date.now(), authorId: state.me.id, name: state.me.name || 'Guest', avatar: state.me.avatar || null, text: text.slice(0,2000), img: state.media || null };
+      wall.get('posts').get(post.id).put(post);
+      wall.get('index').set({ id: post.id, t: post.t });
+      $('#text').value=''; $('#charCount').textContent='0/2000'; state.media=null; $('#mediaName').textContent='';
+    }
+
+    // Reactions (per-user vote stored under reactions/<postId>/<userId> = 'up'|'down')
+    function react(postId, val){
+      root.get('reactions').get(postId).get(state.me.id).put(val);
+      updateReactions(postId);
+    }
+    function updateReactions(postId){
+      let up=0,down=0;
+      root.get('reactions').get(postId).map().once((v)=>{
+        if(v==='up') up++; else if(v==='down') down++;
+        const upEl = document.getElementById('up_'+postId); if(upEl) upEl.textContent = String(up);
+        const dnEl = document.getElementById('down_'+postId); if(dnEl) dnEl.textContent = String(down);
+      });
+    }
+
+    // ===== DMs =====
+    const dmPane = document.createElement('div');
+    function threadId(a,b){ return [a,b].sort().join('__'); }
+
+    function openMessageStart(targetId, targetName, targetAvatar){
+      if(!targetId || targetId===state.me.id){ return; }
+      $('#msgTargetName').textContent = targetName||'User';
+      $('#msgText').value='';
+      const dlg = $('#msgDlg');
+      dlg.returnValue = ''; dlg.showModal();
+      $('#sendFirstMsgBtn').onclick = (e)=>{
+        e.preventDefault();
+        const text = $('#msgText').value.trim(); if(!text) return;
+        const tid = threadId(state.me.id, targetId);
+        sendDM(tid, targetId, text);
+        dlg.close();
+        // Switch to DMs tab and open thread
+        switchTab('dms');
+        setActiveThread(tid, { peerId: targetId, name: targetName, avatar: targetAvatar });
+      };
+    }
+
+    function inboxKey(uid){ return root.get('inbox').get(uid); }
+    function dmsKey(tid){ return root.get('dms').get(tid); }
+
+    function sendDM(tid, peerId, text){
+      const msg = { id: uid(), t: Date.now(), from: state.me.id, to: peerId, text: text.slice(0,2000) };
+      dmsKey(tid).get('msgs').get(msg.id).put(msg);
+      dmsKey(tid).get('index').set({ id: msg.id, t: msg.t });
+      // update inbox for both users
+      inboxKey(state.me.id).get(tid).put({ threadId: tid, peerId, name:null, avatar:null, last: msg.t });
+      inboxKey(peerId).get(tid).put({ threadId: tid, peerId: state.me.id, name: state.me.name, avatar: state.me.avatar || null, last: msg.t });
+    }
+
+    // DM UI (inside DMs tab)
+    function renderDMs(){
+      const container = document.getElementById('tab-dms');
+      container.innerHTML = '';
+      const wrap = document.createElement('div'); wrap.className='card dm-layout';
+
+      const list = document.createElement('div'); list.className='threadlist'; list.id='threadList';
+      const main = document.createElement('div'); main.className='dm-window'; main.id='dmWindow';
+
+      wrap.append(list, main); container.appendChild(wrap);
+      renderThreadList();
+    }
+
+    function renderThreadList(){
+      const list = Object.values(state.inboxThreads).sort((a,b)=> (b.last||0)-(a.last||0));
+      const tl = document.getElementById('threadList');
+      tl.innerHTML='';
+      list.forEach(th=>{
+        const row = document.createElement('div'); row.className='thread'+(state.activeThread===th.threadId?' active':'');
+        const av = document.createElement('div'); av.className='avatar'; av.style.width='36px'; av.style.height='36px';
+        av.innerHTML = th.avatar ? `<img alt="${th.name||'User'}" src="${th.avatar}">` : (th.name||'U')[0].toUpperCase();
+        const meta = document.createElement('div'); meta.style.display='flex'; meta.style.flexDirection='column'; meta.style.gap='2px';
+        const nm = document.createElement('div'); nm.style.fontWeight='800'; nm.textContent = th.name || shortId(th.peerId);
+        const lt = document.createElement('div'); lt.className='muted'; lt.textContent = th.last ? new Date(th.last).toLocaleString() : '';
+        meta.append(nm, lt);
+        row.append(av, meta); tl.appendChild(row);
+        row.addEventListener('click', ()=>{ setActiveThread(th.threadId, th); });
+      });
+
+      // If first time and we have threads, open the first
+      if(!state.activeThread && list.length){ setActiveThread(list[0].threadId, list[0]); }
+    }
+
+    function setActiveThread(tid, meta){
+      state.activeThread = tid; if(meta){ state.inboxThreads[tid] = Object.assign({}, state.inboxThreads[tid]||{}, meta); }
+      renderThreadList();
+      const win = document.getElementById('dmWindow');
+      win.innerHTML = '';
+      const msgs = document.createElement('div'); msgs.className='dm-messages'; msgs.id='dmMsgs';
+      const comp = document.createElement('div'); comp.className='dm-composer';
+      const inp = document.createElement('input'); inp.placeholder='Write a message…'; inp.id='dmInput';
+      const send = document.createElement('button'); send.className='btn'; send.textContent='Send';
+      comp.append(inp, send);
+      win.append(msgs, comp);
+      send.addEventListener('click', ()=>{
+        const text = inp.value.trim(); if(!text) return; const peer = otherFromThread(tid, state.me.id); sendDM(tid, peer, text); inp.value='';
+      });
+
+      // Subscribe live
+      dmsKey(tid).get('index').map().on((row)=>{
+        if(!row || !row.id) return;
+        dmsKey(tid).get('msgs').get(row.id).once(m=>{
+          if(!m || !m.t) return; addDMMessage(m);
+        });
+      });
+    }
+
+    function addDMMessage(m){
+      const wrap = document.getElementById('dmMsgs'); if(!wrap) return;
+      const b = document.createElement('div'); b.className='bubble ' + (m.from===state.me.id?'mine':'theirs');
+      b.textContent = m.text || '';
+      wrap.appendChild(b); wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    function otherFromThread(tid, me){ const parts = tid.split('__'); return parts[0]===me?parts[1]:parts[0]; }
+    function shortId(id){ return (id||'').slice(0,6)+'…'; }
+
+    // Subscribe to my inbox
+    root.get('inbox').get(state.me.id).map().on((th, key)=>{
+      if(!th || !th.threadId) return;
+      // enrich with known profile if available
+      const existing = state.inboxThreads[th.threadId]||{};
+      state.inboxThreads[th.threadId] = Object.assign(existing, th);
+      renderThreadList();
+    });
+
+    // ===== Profile =====
+    $('#saveProfileBtn').addEventListener('click', (e)=>{
+      e.preventDefault();
+      state.me.name = ($('#nameInput').value||'').slice(0,40) || state.me.name;
+      // avatar already set via handlers below
+      saveMe(); renderMe(); document.getElementById('profileDlg').close();
+    });
+
+    // Open profile tab
+    function openProfile(){
+      $('#nameInput').value = state.me.name || '';
+      $('#avatarPreview').innerHTML = state.me.avatar ? `<img alt="me" src="${state.me.avatar}" style="width:100%;height:100%;object-fit:cover">` : '👤';
+      $('#avatarUrl').value = '';
+      document.getElementById('profileDlg').showModal();
+    }
+
+    // Avatar updates
+    $('#avatarFile').addEventListener('change', async (e)=>{ const f=e.target.files?.[0]; if(!f)return; if(f.size>1024*1024){ alert('Avatar too large (max 1MB).'); return;} const data=await toDataURL(f); state.me.avatar=data; saveMe(); $('#avatarPreview').innerHTML = `<img alt="me" src="${data}" style="width:100%;height:100%;object-fit:cover">`; renderMe(); });
+    $('#avatarUrl').addEventListener('change', (e)=>{ const url=e.target.value.trim(); if(url){ state.me.avatar=url; saveMe(); $('#avatarPreview').innerHTML = `<img alt="me" src="${url}" style="width:100%;height:100%;object-fit:cover">`; renderMe(); }});
+
+    // ===== Events =====
+    $('#text').addEventListener('input', e=> $('#charCount').textContent = `${e.target.value.length}/2000`);
+    $('#postBtn').addEventListener('click', submitPost);
+    $('#mediaFile').addEventListener('change', async (e)=>{ const f=e.target.files?.[0]; if(!f)return; if(f.size>2*1024*1024){ alert('Max image size 2MB'); return;} state.media = await toDataURL(f); $('#mediaName').textContent=f.name; });
+
+    // Tabs
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(t => t.addEventListener('click', ()=>{ switchTab(t.dataset.tab); }));
+
+    function switchTab(name){
+      tabs.forEach(t=> t.classList.toggle('active', t.dataset.tab===name));
+      if(name==='profile'){ openProfile(); return; }
+      ensureTabContainers();
+      document.getElementById('tab-feed').style.display = (name==='feed')?'block':'none';
+      document.getElementById('tab-dms').style.display = (name==='dms')?'block':'none';
+      if(name==='dms'){ renderDMs(); }
+    }
+
+    function ensureTabContainers(){
+      if(!document.getElementById('tab-feed')){ const f=document.createElement('div'); f.id='tab-feed'; f.style.display='block'; f.appendChild(document.querySelector('.grid')); document.body.appendChild(f); }
+      if(!document.getElementById('tab-dms')){ const d=document.createElement('div'); d.id='tab-dms'; d.style.display='none'; document.body.appendChild(d); }
+    }
+    ensureTabContainers();
+
+    // Status
+    let peerCount=0; gun.on('hi', ()=>{peerCount++; setStatus();}); gun.on('bye', ()=>{peerCount=Math.max(0,peerCount-1); setStatus();});
+    function setStatus(){ $('#status').textContent = (peerCount>0?`Connected · ${peerCount} relay(s)`:'Connecting…'); }
+
+  })();
+  </script>
+</body>
+</html>
